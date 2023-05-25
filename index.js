@@ -1,16 +1,29 @@
 const canvas = document.getElementsByTagName('canvas')[0];
 const ctx = canvas.getContext("2d");
 
-canvas.width = innerWidth;
+canvas.width = 1000;
 canvas.height = 400;
 
-const gameSpeed = 0.2
+let leftScrollOffset = 0;
+let rightScrollOffset = 0;
+const gameSpeed = 0.1;
 const deathAudio = new Audio('./game-assets/death.mp3')
-const jumpAudio = new Audio('./game-assets/jump.mp3')
+const jumpAudio = new Audio('./game-assets/jump.wav')
 
 const deathImage = new Image();
 deathImage.src = './game-assets/game-over.webp';
 
+const marioRight = new Image();
+marioRight.src = './game-assets/marioRight.png'
+
+const marioLeft = new Image();
+marioLeft.src = './game-assets/marioLeft.png'
+
+const marioJump = new Image();
+marioJump.src = './game-assets/marioJump.png'
+
+const enemy = new Image();
+enemy.src = './game-assets/enemy.png'
 
 const backgroundImage = new Image();
 backgroundImage.src = "./game-assets/background.png"
@@ -41,21 +54,97 @@ class Mario {
             x:0,
             y:gameSpeed*2,
         }
-        this.width = 18
+        this.width = 16
         this.height = 18
-        this.gravity = 0.5
+        this.gravity = 0.4
+        this.imageFrames = [
+            {
+                image:marioRight,
+                frames:[
+                    {
+                        type:'idle',
+                        framePosition:0
+                    },
+                    {
+                        type:'run',
+                        framePosition:16
+                    },
+                    {
+                        type:'stand',
+                        framePosition:30
+                    },
+                    {
+                        type:'full-run',
+                        framePosition:44
+                    },
+                    {
+                        type:'left-press',
+                        framePosition:65
+                    }
+                ]
+            },
+            {
+                 image:marioLeft,
+                 frames:[
+                    {
+                        type:'idle',
+                        framePosition:46
+                    },
+                    {
+                        type:'run',
+                        framePosition:31
+                    },
+                    {
+                        type:'stand',
+                        framePosition:17
+                    },
+                    {
+                        type:'full-run',
+                        framePosition:1
+                    }
+                ]
+            },
+            {
+                image:marioJump,
+                frames:[
+                    {
+                        type:'right',
+                        framePosition:6
+                    },
+                    {
+                        type:'left',
+                        framePosition:26
+                    }
+                ]
+
+            }
+        ]
+        this.direction = 0;
+        this.frames = 0;
     }
     
     draw(){
-        ctx.fillStyle = 'red'
-        ctx.fillRect(this.position.x , this.position.y , this.width , this.height)
-    }
+        ctx.drawImage(
+            this.imageFrames[this.direction].image,
+            (!this.velocity.x) ? this.imageFrames[this.direction].frames
+            [0].framePosition 
+            : this.imageFrames[this.direction].frames[this.frames].framePosition,
+            0,
+            16,
+            18,
+            this.position.x,
+            this.position.y,
+            this.width, 
+            this.height
+        )
+}
 
     update(){
         this.draw()
-        this.position.x += this.velocity.x;
-        this.position.y += this.velocity.y;
-        if( this.position.y + this.height + this.velocity.y <= canvas.height ){ 
+        if(this.frames > 3) this.frames = 0
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y ;
+        if(this.position.y + this.height + this.velocity.y <= canvas.height ){ 
             this.velocity.y += this.gravity
         }
         else this.velocity.y = 0
@@ -66,8 +155,7 @@ class Mario {
         if(this.position.y < 0){
             this.velocity.y = 0;
             this.position.y = 0
-        }
-        
+        } 
     }
 }
 
@@ -84,23 +172,53 @@ class DeathImage{
 }
 
 class Enemies {
-    constructor(x , y , height, width){
+    constructor(x , y , platformWidth){
         this.position = {
             x,
             y
         }
-        this.width = width
-        this.height = height
-        this.maxWidth = width
+        this.width = 18
+        this.height = 18
+        this.maxWidth = 18
+        this.xVelocity = 0
+        this.imageFrames = 
+            {
+                image:enemy,
+                frames:[
+                    {
+                        framePosition:1,
+                    },
+                    {
+                        framePosition:20
+                    }
+                ]
+            }
+        this.frames=0
+        this.platformWidth = platformWidth
     }
 
     draw(){
-        ctx.fillStyle  = 'rgba(255 , 255 , 255, 0)'
-        ctx.fillRect(this.position.x , this.position.y , this.width , this.height);
+        ctx.fillStyle  = 'rgba(255 , 255 , 255, 1)'
+        ctx.drawImage(
+            this.imageFrames.image ,
+            this.imageFrames.frames[this.frames].framePosition,
+            0,
+            18,
+            20,
+            this.position.x,
+            this.position.y , this.width , this.height);
+    }
+    update(){
+        this.draw();
+        this.position.x += this.xVelocity
     }
 }
 
-const enemies  = [ new Enemies(246  , 181 , 50 , 65) , new Enemies(945 , 184 , 32 , 56) ];
+const enemies  = [ new Enemies(400  , 342 - 18  , 423) , new Enemies(641 + 180 , 242 - 18, 208),
+    new Enemies(1070 + 110 , 107 -18 ,178),new Enemies(3097 + 10 , 240 -18 , 99),
+    new Enemies(2777 + 180 , 187 -18 ,205), new Enemies(3840 + 50 , 346 -18 , 348),
+    new Enemies(3840 + 150 , 346 -18 , 348)
+];
 
 const deathAnimation = new DeathImage();
 
@@ -115,14 +233,15 @@ class Platform {
         this.maxWidth = width
     }
     draw(){
+        ctx.fillStyle = 'blue'
         ctx.fillRect(this.position.x ,this.position.y , this.width , this.height);
     }
 }
 //, new Platform( 495 , 320 ,95)
         
 const platforms = [
-    new Platform( 0, 346 ,423) , new Platform( 486 , 320 ,95) , 
-    new Platform(641 , 242 , 208 ) , new Platform(696 ,133 , 125) , 
+    new Platform( 0, 342 ,423) , new Platform( 486 , 320 ,95) , 
+    new Platform(641 , 242 , 208 ) , new Platform(696 ,135, 125) , 
     new Platform(857  ,  320 ,  71) , new Platform(937 , 214 , 125) ,
     new Platform(1070 , 107 ,178), new Platform(1337 , 347 , 99) ,
     new Platform( 1577 , 347 , 125 ) , new Platform(1603 , 134 , 99),
@@ -153,28 +272,83 @@ const deathSequence = ()=>{
         await deathAudio.play()
     }
     playFunc();
-    mario.velocity.y = -10
+    mario.velocity.y = 10
     setTimeout(()=>{
         location.href = "/death.html"
     } , 500)
     
 }
 
+class Coins{
+    constructor(x, y , width , specialFunction){
+        this.position = {
+            x,
+            y
+        }
+        this.width = width
+        this.height = 27
+        this.maxWidth = width
+        this.specialFunction = specialFunction
+    }
+    draw(){
+        ctx.fillStyle  = 'rgba(255 , 255 , 255, 0)'
+        ctx.fillRect(this.position.x , this.position.y , this.width , this.height);
+    }
+}
+
+const enemieDeath = (enemy) =>{
+    enemy.xVelocity = 0;
+    const intervalId = setInterval(()=>{
+        if(enemy.height <= 0) clearInterval(intervalId);
+        else{
+            enemy.position.y += 3
+            enemy.height -= 3;
+        }
+    } , 1000)
+}
+
+class WinLine{
+    constructor(){
+        this.position = {
+            x : 130,
+            y : 0
+        },
+        this.width = 0;
+        this.height = 400;
+    }
+    draw(){
+        ctx.fillStyle = 'red';
+        ctx.fillRect(this.position.x , this.position.y , this.width , this.height)
+    }
+}
+
+const winline =  new WinLine();
+const winSequence = async () =>{
+    location.href = './win.html'
+}
+
+
+const coins = [new Coins(720 , 107 , 24 , deathSequence)];
+
 function animate (){
     requestAnimationFrame(animate);
     ctx.clearRect( 0 , 0 , canvas.width , canvas.height)
     background.draw();
-     
+    winline.draw();
     platforms.forEach((platform)=>{
-        //console.log(platform.width - mario.position.x)1002 ,  
         platform.draw();
     })
     mario.update();
     if(keys.right.pressed && (mario.position.x <= 400)) {
-        mario.velocity.x =gameSpeed 
+        mario.velocity.x =gameSpeed * 0.0001
+        if(leftScrollOffset < 3000)leftScrollOffset += 3;
+        console.log(leftScrollOffset)
+        winline.position.x -= gameSpeed *(enemies.length + platforms.length + coins.length)
     }
     else if (keys.left.pressed && mario.position.x > 100) {
-        mario.velocity.x = -gameSpeed 
+        mario.velocity.x = -gameSpeed * 0.0001
+        if(leftScrollOffset < 3000) leftScrollOffset -= 1;
+        winline.position.x += gameSpeed *(enemies.length + platforms.length + coins.length)
     }
     else {
         mario.velocity.x = 0
@@ -182,32 +356,50 @@ function animate (){
 
     //enemies 
     enemies.forEach((enemie) =>{
-        enemie.draw()
+        enemie.update()
     })
 
-    enemies.forEach((enemie) =>{
-       
+    //drawing coins
+    coins.forEach((coin)=>{
+        coin.draw();
+    })
+
+    enemies.forEach((enemie) =>{  
         if(enemie.width <= 0){
             enemie.width = 0 ;
         }
         if(keys.right.pressed && background.position.x <= 0 && background.position.x > -3900){
-            console.log(enemie.position.x)
-            console.log(enemie.width)
             background.position.x -= gameSpeed
                 if(enemie.width > 0 && enemie.position.x ===  0){
                 enemie.width -= gameSpeed;
                 }
-                enemie.position.x -=(platforms.length + enemies.length) * gameSpeed 
+                enemie.position.x -=(platforms.length + enemies.length + coins.length) * gameSpeed 
         }else if(keys.left.pressed && background.position.x < 0){
             background.position.x += gameSpeed
             if(enemie.width < enemie.maxWidth && background.position.x > -enemie.maxWidth && enemie.position.x === 0){
                 enemie.width += gameSpeed
             } 
             
-                enemie.position.x += (platforms.length + enemies.length) * gameSpeed 
+                enemie.position.x += (platforms.length + enemies.length + coins.length) * gameSpeed 
         } else if(background.position.x > 0){
             background.position.x = 0
         }
+    })
+
+    if(mario.position.x > winline.position.x && leftScrollOffset > 3000){
+        winSequence();
+    }
+
+    //to make enemy move in vicinity of player
+    enemies.forEach((enemie)=>{
+        let intervalId;
+        if(enemie.position.x - mario.position.x < enemie.platformWidth / 1.5){
+             intervalId  = setInterval(()=>{
+                if(enemie.frames == 1) enemie.frames = 0;
+                enemie.frames++;
+            } , 75)
+             enemie.xVelocity = -gameSpeed * 10;
+            }
     })
         
     
@@ -221,14 +413,34 @@ function animate (){
                 if(platform.width > 0 && platform.position.x ===  0){
                      platform.width -= gameSpeed;
                 }
-                platform.position.x -=(platforms.length + enemies.length)* gameSpeed
+                platform.position.x -=(platforms.length + enemies.length + coins.length)* gameSpeed
         }else if(keys.left.pressed && background.position.x < 0){
             background.position.x += gameSpeed
             if(platform.width < platform.maxWidth && background.position.x > -platform.maxWidth && platform.position.x === 0){
                 platform.width += gameSpeed
             } 
-            
-                platform.position.x +=( platforms.length + enemies.length)*gameSpeed
+            platform.position.x +=(platforms.length + enemies.length + coins.length)*gameSpeed
+        } else if(background.position.x > 0){
+            background.position.x = 0
+        }
+    })
+
+    coins.forEach((coin)=>{
+        if(coin.width <= 0){
+            coin.width = 0 ;
+        }
+        if(keys.right.pressed && background.position.x <= 0 && background.position.x > -3900){
+            background.position.x -= gameSpeed
+                if(coin.width > 0 && coin.position.x ===  0){
+                coin.width -= gameSpeed;
+                }
+                coin.position.x -=(platforms.length + coins.length +  enemies.length) * gameSpeed 
+        }else if(keys.left.pressed && background.position.x < 0){
+            background.position.x += gameSpeed
+            if(coin.width < coin.maxWidth && background.position.x > -coin.maxWidth && coin.position.x === 0){
+                coin.width += gameSpeed
+            } 
+            coin.position.x += (platforms.length + coins.length +  enemies.length) * gameSpeed 
         } else if(background.position.x > 0){
             background.position.x = 0
         }
@@ -236,6 +448,7 @@ function animate (){
 
     //death sequence
     
+    //collision with castle at starting
   
    
     //collison detection 
@@ -249,67 +462,105 @@ function animate (){
         }
     })
 
-    //collision detection for enemies 
+    //collision detection for enemy 
     enemies.forEach((enemie)=>{
-        console.log(enemie.position.y + enemie.height )
-        console.log(mario.position.y)
-        if((mario.position.x + mario.width >= enemie.position.x) && 
-        (mario.position.y  <= enemie.position.y + enemie.height) &&
-        (mario.position.x <= enemie.position.x + enemie.width)
-        ){
+        if((mario.position.x + mario.width >= enemie.position.x && 
+            Math.floor(Math.abs(mario.position.y + mario.height - (enemie.position.y + enemie.height))) == 0 &&
+            mario.position.x < enemie.position.x + enemie.width
+            )){
            deathSequence();
         }
+        if( mario.position.x + mario.width - enemie.position.x > 1 &&
+                mario.position.x<= enemie.position.x + enemie.width &&
+                mario.position.y + mario.height >= enemie.position.y +  enemie.height){
+                    console.log( mario.position.x + mario.width - enemie.position.x);
+                    mario.velocity.y = 0;
+                    enemieDeath(enemie);
+        }
+
     })
 
+    coins.forEach((coin)=>{
+        if((mario.position.x + mario.width >= coin.position.x) && 
+        (mario.position.y  <= coin.position.y + coin.height) &&
+        (mario.position.x <= coin.position.x + coin.width)  &&
+        (mario.position.y + mario.height + mario.velocity.y >= coin.position.y)){
+            coin.width = 0;
+            
+        }
+    })
     if(mario.position.y  > 375){
         deathSequence();
     }
-  
-    
 }
 
 
 
-animate()
+animate();
 
-window.addEventListener('keydown' , ({ keyCode }) =>{
-     switch (keyCode){
-        case 38:
-            if( upKeystokes < 10){
-               mario.velocity.y -= 6
-               }
-            break;
-        case 39:
-            if(!death){
-            upKeystokes = 0
+
+const jumpAudioPlay = async () =>{
+    await jumpAudio.play();
+}
+const animationInterval = () =>{
+    return 
+}
+let intervalRightId;
+let intervalLeftId;
+let timeoutId;
+
+window.addEventListener('keydown' , ( event ) =>{
+    if(event.repeat) return
+    if(event.keycode == 38){
+        timeoutId = setTimeout(()=>{
+            mario.velocity.y -= gameSpeed * 80;
+        } , 500)
+    }
+    if(event.keyCode == 39){
+        if(!death){
+            mario.direction = 0;
             keys.right.pressed = true;
+            intervalRightId = setInterval(()=>{
+            if(mario.frames == 3) mario.frames = 1;
+            else{
+                console.log('hello');
+                mario.frames++
             }
-            break;
-        case 37:
-            if(!death){
-            upKeystokes = 0
-            keys.left.pressed = true;
-            }
-            break
-    } 
+            } , 100)
+    }} else if(event.keyCode == 37){
+        if(!death){
+            mario.direction = 1;
+          keys.left.pressed = true;
+          intervalLeftId = setInterval(()=>{
+              if(mario.frames == 3) mario.frames = 1;
+              else{
+                  console.log('hello');
+              mario.frames++
+              }
+              } , 100)
+      }
+    }
 })
 
-window.addEventListener('keyup' , ({ keyCode }) =>{
-    switch (keyCode){
-       case 38:
-           upKeystokes++
-           if(upKeystokes < 10){
-            mario.velocity.y -= 6
-           }
-           break;
-       case 39:
-           keys.right.pressed = false;
-           break;
-       case 37:
-           keys.left.pressed = false;
-           break
-   } 
-   
-})
+window.addEventListener('keyup' , ({ keyCode , repeat }) =>{
+    if(repeat) return 
+    
+    if(keyCode ==38){
+        clearTimeout(timeoutId);
+        mario.velocity.y -= gameSpeed * 70
+        jumpAudioPlay();
+    }  
+    if(keyCode == 39){
+        clearInterval(intervalRightId);
+        keys.right.pressed = false; 
+    }
+    else if(keyCode == 37){
+        clearInterval(intervalLeftId);
+        keys.left.pressed = false;
+    }     
+           
+     
+            
+   } )
 
 
