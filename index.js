@@ -234,7 +234,7 @@ class Platform {
     }
     draw(){
         ctx.fillStyle = 'blue'
-        ctx.fillRect(this.position.x ,this.position.y , this.width , thi.sheight);
+        ctx.fillRect(this.position.x ,this.position.y , this.width , this.height);
     }
 }
 //, new Platform( 495 , 320 ,95)
