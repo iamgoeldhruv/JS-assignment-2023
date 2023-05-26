@@ -234,7 +234,7 @@ class Platform {
     }
     draw(){
         ctx.fillStyle = 'blue'
-        ctx.fillRect(this.position.x ,this.position.y , this.width , this.height);
+        ctx.fillRect(this.position.x ,this.position.y , this.width , thi.sheight);
     }
 }
 //, new Platform( 495 , 320 ,95)
@@ -274,7 +274,7 @@ const deathSequence = ()=>{
     playFunc();
     mario.velocity.y = 10
     setTimeout(()=>{
-        location.href = "/death.html"
+        location.href = "/JS-assignment-2023/death.html"
     } , 500)
     
 }
@@ -324,7 +324,7 @@ class WinLine{
 
 const winline =  new WinLine();
 const winSequence = async () =>{
-    location.href = './win.html'
+    location.href = '/JS-assignment-2023/win.html'
 }
 
 
