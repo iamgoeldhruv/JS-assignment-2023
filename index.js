@@ -510,8 +510,9 @@ let intervalLeftId;
 let timeoutId;
 
 window.addEventListener('keydown' , ( event ) =>{
+    console.log(event.keyCode);
     if(event.repeat) return
-    if(event.keycode == 38){
+    if(event.keycode == 38 || event.keyCode == 32){
         timeoutId = setTimeout(()=>{
             mario.velocity.y -= gameSpeed * 80;
         } , 500)
@@ -545,7 +546,7 @@ window.addEventListener('keydown' , ( event ) =>{
 window.addEventListener('keyup' , ({ keyCode , repeat }) =>{
     if(repeat) return 
     
-    if(keyCode ==38){
+    if(keyCode ==38 || keyCode == 32){
         clearTimeout(timeoutId);
         mario.velocity.y -= gameSpeed * 70
         jumpAudioPlay();
