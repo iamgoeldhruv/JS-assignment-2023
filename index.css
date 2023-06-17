@@ -11,3 +11,17 @@
     flex-direction: column;
 }
 
+#joystick{
+    display: none;
+}
+
+@media (max-width:400px) {
+    #joystick{
+        display: block;
+        position: absolute;
+        top:75%;
+        left: 15%;
+        z-index: 1;
+        border-radius:50%;
+    }
+}

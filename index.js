@@ -1,5 +1,8 @@
-const canvas = document.getElementsByTagName('canvas')[0];
+const canvas = document.getElementsByTagName('canvas')[1];
 const ctx = canvas.getContext("2d");
+
+const joystick = document.getElementsByTagName('canvas')[0];
+const jtx = joystick.getContext('2d');
 
 canvas.width = 1000;
 canvas.height = 400;
@@ -329,12 +332,68 @@ const winSequence = async () =>{
 
 
 const coins = [new Coins(720 , 107 , 24 , deathSequence)];
+class JoystickBackGround {
+    constructor(){
+        this.center = {
+            x:100,
+            y:100
+        }
+        this.radius = 50;
+    }
+    draw(){
+        jtx.beginPath();
+        jtx.arc(this.center.x , this.center.y , this.radius , 0 , Math.PI * 2 );
+        jtx.fillStyle = '#ffffff';
+        jtx.fill();
+    }
+}
+const joystickBackground = new JoystickBackGround();
+joystick.width = joystickBackground.radius;
+joystick.height = joystickBackground.radius;
+
+class Joystick{
+    constructor(){
+        this.center = {
+            x : joystickBackground.radius/2,
+            y: joystickBackground.radius/2
+        }
+        this.radius = 10;
+        this.velocity = {
+            x:0,
+            y:0
+        }
+    }
+    draw(){
+        jtx.beginPath();
+        jtx.arc(this.center.x , this.center.y , this.radius , 0 , Math.PI * 2 );
+        jtx.fillStyle = 'red';
+        jtx.fill();
+    }
+    update(){
+        this.draw();
+        this.center.x += this.velocity.x;
+        this.center.y -= this.velocity.y;
+    }
+}
+
+
+const joystickImpl = new Joystick();
+
+const joystickPosition = joystick.getBoundingClientRect();
+
+const joyStickCenter ={
+    x:joystickPosition.left + 30,
+    y:joystickPosition.top + 25
+}
 
 function animate (){
     requestAnimationFrame(animate);
     ctx.clearRect( 0 , 0 , canvas.width , canvas.height)
     background.draw();
     winline.draw();
+    jtx.clearRect( 0 , 0 , joystick.width , joystick.height)
+    joystickBackground.draw();
+    joystickImpl.update();
     platforms.forEach((platform)=>{
         platform.draw();
     })
@@ -342,7 +401,6 @@ function animate (){
     if(keys.right.pressed && (mario.position.x <= 400)) {
         mario.velocity.x =gameSpeed * 0.0001
         if(leftScrollOffset < 3000)leftScrollOffset += 3;
-        console.log(leftScrollOffset)
         winline.position.x -= gameSpeed *(enemies.length + platforms.length + coins.length)
     }
     else if (keys.left.pressed && mario.position.x > 100) {
@@ -473,7 +531,6 @@ function animate (){
         if( mario.position.x + mario.width - enemie.position.x > 1 &&
                 mario.position.x<= enemie.position.x + enemie.width &&
                 mario.position.y + mario.height >= enemie.position.y +  enemie.height){
-                    console.log( mario.position.x + mario.width - enemie.position.x);
                     mario.velocity.y = 0;
                     enemieDeath(enemie);
         }
@@ -492,9 +549,20 @@ function animate (){
     if(mario.position.y  > 375){
         deathSequence();
     }
+
+    //console.log( Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) > 130)
+    //console.log(joyStickCenter.x + joystickImpl.radius + joystickImpl.velocity.x> joystickBackground.center.x + joystickBackground.radius)
+    //joystick collision
+        if((joystickImpl.center.x + joystickImpl.radius + joystickImpl.velocity.x )> (joystickBackground.center.x + joystickBackground.radius) || 
+            (Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) > 130 || 
+            Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) < 80)
+        ){
+            console.log('hello')
+            joystickImpl.velocity.x = 0 
+            joystickImpl.velocity.y = 0
+         
+        } 
 }
-
-
 
 animate();
 
@@ -502,15 +570,15 @@ animate();
 const jumpAudioPlay = async () =>{
     await jumpAudio.play();
 }
-const animationInterval = () =>{
-    return 
-}
+
+
 let intervalRightId;
 let intervalLeftId;
 let timeoutId;
 
+let joystickPressed = 0;
+
 window.addEventListener('keydown' , ( event ) =>{
-    console.log(event.keyCode);
     if(event.repeat) return
     if(event.keycode == 38 || event.keyCode == 32){
         timeoutId = setTimeout(()=>{
@@ -524,7 +592,6 @@ window.addEventListener('keydown' , ( event ) =>{
             intervalRightId = setInterval(()=>{
             if(mario.frames == 3) mario.frames = 1;
             else{
-                console.log('hello');
                 mario.frames++
             }
             } , 100)
@@ -535,13 +602,14 @@ window.addEventListener('keydown' , ( event ) =>{
           intervalLeftId = setInterval(()=>{
               if(mario.frames == 3) mario.frames = 1;
               else{
-                  console.log('hello');
               mario.frames++
               }
               } , 100)
       }
     }
 })
+
+
 
 window.addEventListener('keyup' , ({ keyCode , repeat }) =>{
     if(repeat) return 
@@ -558,10 +626,140 @@ window.addEventListener('keyup' , ({ keyCode , repeat }) =>{
     else if(keyCode == 37){
         clearInterval(intervalLeftId);
         keys.left.pressed = false;
-    }     
-           
-     
-            
-   } )
+    }    
+})
+
+joystick.addEventListener('mousedown' , (event) =>{
+    joystickPressed = 1;
+})
+
+joystick.addEventListener('mouseup' , (event) =>{
+    joystickPressed = 0;
+    joystickImpl.center = {
+        x : joystickBackground.radius/2,
+        y: joystickBackground.radius/2
+    }
+    jtx.clearRect( 0 , 0 , joystick.width , joystick.height )
+    clearInterval(intervalRightId);
+    keys.right.pressed = false;
+    clearInterval(intervalLeftId);
+    keys.left.pressed = false; 
+})
+
+joystick.addEventListener('mousemove' , (event) =>{
+    console.log (Math.abs((joystickImpl.center.x + joystickImpl.radius + joystickImpl.velocity.x ) - (joystickBackground.center.x + joystickBackground.radius)))
+    if(joystickPressed === 1){
+        const angle = Math.atan2( joyStickCenter.y - event.clientY , event.clientX - joyStickCenter.x );
+        if((joystickImpl.center.x + joystickImpl.radius + joystickImpl.velocity.x )> (joystickBackground.center.x + joystickBackground.radius) > 70 ||
+                Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) > 130 || 
+                Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) < 110 ||
+                Math.abs((joystickImpl.center.x + joystickImpl.radius + joystickImpl.velocity.x ) - (joystickBackground.center.x + joystickBackground.radius)) > 128
+        ){
+            joystickImpl.velocity.x = 0 
+            joystickImpl.velocity.y = 0     
+        }
+        else{
+            joystickImpl.velocity.x = 0.35 * Math.cos(angle);
+            joystickImpl.velocity.y = 0.35 * Math.sin(angle);
+            if(Math.sin(angle) > 0){
+                timeoutId = setTimeout(()=>{
+                    mario.velocity.y -= gameSpeed * 10 * Math.sin(angle);
+                } , 500)
+            }
+            if(Math.cos(angle)>0){
+                    if(!death){
+                        mario.direction = 0;
+                        keys.right.pressed = true;
+                        intervalRightId = setInterval(()=>{
+                        if(mario.frames == 3) mario.frames = 1;
+                        else{
+                            mario.frames++
+                        }
+                        } , 1000)
+                }
+            }
+            else{
+                if(!death){
+                    mario.direction = 1;
+                    keys.left.pressed = true;
+                    intervalLeftId = setInterval(()=>{
+                      if(mario.frames == 3) mario.frames = 1;
+                      else{
+                      mario.frames++
+                      }
+                      } , 1000)
+              }
+            }
+        }
+    }
+    else {
+        joystickImpl.velocity.x = 0;
+        joystickImpl.velocity.y = 0;
+    }
+})
+
+let joystickTouched = 0;
+
+joystick.addEventListener('touchstart' , (event)=>{
+    joystickTouched = 1;
+})
+
+joystick.addEventListener('touchmove' , (event)=>{
+    if(joystickPressed === 1 && event.targetTouches[0].target === canvas){
+        const angle = Math.atan2( joyStickCenter.y - event.clientY , event.clientX - joyStickCenter.x );
+        if((joystickImpl.center.x + joystickImpl.radius + joystickImpl.velocity.x )> (joystickBackground.center.x + joystickBackground.radius) ||
+                Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) > 130 || 
+                Math.abs((joystickImpl.center.y + joystickImpl.radius + joystickImpl.velocity.y) - (joystickBackground.center.y + joystickBackground.radius)) < 90
+        ){
+            joystickImpl.velocity.x = 0 
+            joystickImpl.velocity.y = 0     
+        }
+        else{
+            joystickImpl.velocity.x = 0.35 * Math.cos(angle);
+            joystickImpl.velocity.y = 0.35 * Math.sin(angle);
+            if(Math.sin(angle) > 0){
+                timeoutId = setTimeout(()=>{
+                    mario.velocity.y -= gameSpeed * 10 * Math.sin(angle);
+                } , 500)
+            }
+            if(Math.cos(angle)>0){
+                    if(!death){
+                        mario.direction = 0;
+                        keys.right.pressed = true;
+                        intervalRightId = setInterval(()=>{
+                        if(mario.frames == 3) mario.frames = 1;
+                        else{
+                            mario.frames++
+                        }
+                        } , 1000)
+                }
+            }
+            else{
+                if(!death){
+                    mario.direction = 1;
+                    keys.left.pressed = true;
+                    intervalLeftId = setInterval(()=>{
+                      if(mario.frames == 3) mario.frames = 1;
+                      else{
+                      mario.frames++
+                      }
+                      } , 1000)
+              }
+            }
+        }
+    }
+    else {
+        joystickImpl.velocity.x = 0;
+        joystickImpl.velocity.y = 0;
+    }
+})
 
 
+joystick.addEventListener('touchend' , (event)=>{
+    joystickTouched = 0;
+    joystickImpl.center = {
+        x : joystickBackground.radius/2,
+        y: joystickBackground.radius/2
+    }
+    jtx.clearRect( 0 , 0 , joystick.width , joystick.height )
+})
